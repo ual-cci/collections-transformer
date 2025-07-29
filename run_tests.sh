@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Starting Collections Transformer Tests"
+echo "Starting Tests"
 echo "=================================================="
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,7 +26,6 @@ if [ ! -d "$SCRIPT_DIR/server" ] || [ ! -d "$SCRIPT_DIR/client" ]; then
     exit 1
 fi
 
-# Check if venv exists and activate
 if [ -d "$SCRIPT_DIR/server/venv" ]; then
     echo "Activating Python virtual environment"
     source "$SCRIPT_DIR/server/venv/bin/activate"
@@ -36,7 +35,6 @@ else
     echo "Consider creating one: cd server && python3 -m venv venv"
 fi
 
-# Check Flask and Mongo imports
 echo "Checking Python dependencies"
 python3 -c "import flask, pymongo" 2>/dev/null
 if [ $? -ne 0 ]; then
@@ -44,7 +42,6 @@ if [ $? -ne 0 ]; then
     echo "   Consider installing: pip install flask pymongo requests"
 fi
 
-# Check if MongoDB is running
 echo "Checking MongoDB status"
 if command -v systemctl &> /dev/null; then
     if systemctl is-active --quiet mongod; then
@@ -69,3 +66,4 @@ else
 fi
 
 exit $TEST_EXIT_CODE 
+

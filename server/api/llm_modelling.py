@@ -53,8 +53,6 @@ def init(model):
 
 def get_model_baseline(prompt_examples,items_for_inference,analyser,labels,dataset):
 
-  print("get_model_baseline")
-
   #Get fake "random" predictions based on example distribution
   if (analyser['analyser_type'] == "binary"):
     pos_examples = [example for example in prompt_examples if str(example['label']) == "1"]
@@ -102,21 +100,7 @@ def get_model_baseline(prompt_examples,items_for_inference,analyser,labels,datas
 
 
 def use_model(prompt,prompt_examples,item_indices,items_for_inference, analyser):
-  try: 
-    print("=" * 80)
-    print("USING MODEL WITH PROMPT:")
-    print("=" * 80)
-    print(f"Analyser ID: {analyser['_id']}")
-    print(f"Analyser Name: {analyser['name']}")
-    print(f"Analyser Type: {analyser['analyser_type']}")
-    print(f"Analyser Format: {analyser['analyser_format']}")
-    print(f"Number of prompt examples: {len(prompt_examples)}")
-    print(f"Number of items for inference: {len(items_for_inference)}")
-    print("=" * 80)
-    print("SYSTEM PROMPT:")
-    print("=" * 80)
-    print(prompt)
-    print("=" * 80)
+  try:
     prediction_results = make_predictions(prompt,prompt_examples,item_indices,items_for_inference, analyser['analyser_type'], analyser['analyser_format'])
     return prediction_results
   
@@ -252,15 +236,12 @@ def create_user_prompt(inference_examples, analyser_type, analyser_format):
     return None
 
   except Exception as e:
-    print("exception in create_user_prompt")
     print(e)
 
 
 
 def make_predictions(system_prompt,prompt_examples,test_set_indices,test_set,analyser_type,analyser_format):
 
-  print("making predictions")
-  
   if (analyser_format == "text") and (model_source!="huggingface"):
     prompt_batch_size = 10
   elif (analyser_format != "text") and (model_source=="huggingface"):
@@ -278,10 +259,8 @@ def make_predictions(system_prompt,prompt_examples,test_set_indices,test_set,ana
   predictions = []
 
   while i < len(test_set_indices):
-    print("Calculating predictions: Batch " + str(batch_count))
     try:
       if retry_count == max_retry_count:
-        print("Max retry exceeded for batch " + str(batch_count))
         i+= prompt_batch_size
         batch_count += 1
         retry_count = 0
@@ -348,7 +327,6 @@ def make_predictions(system_prompt,prompt_examples,test_set_indices,test_set,ana
           }                    
         
       else:
-        print("Trying to predict empty batch")
         i+= prompt_batch_size
         batch_results = None
       
@@ -375,9 +353,6 @@ def make_predictions(system_prompt,prompt_examples,test_set_indices,test_set,ana
 
 
 def get_batch_predictions(i,test_batch, system_prompt, analyser_type, analyser_format, prompt_examples=None, test_indices=None):
-    
-    print("Calculating batch predictions for " + str(len(test_batch)) + " in batch " + str(int(math.ceil(i/len(test_batch)))))
-
     try:
       trancename = ""
       token_usage = None
@@ -412,7 +387,6 @@ def get_batch_predictions(i,test_batch, system_prompt, analyser_type, analyser_f
               content_errors.append(rerun_result['error'])
 
       if model_source == "openai":
-        print("GETTING OPENAI RESPONSE")
         model_result = provider_openai.get_openai_gpt_response(system_prompt, user_prompt)
         if model_result['status']=="200":
           batch_end_time = model_result["end"]
@@ -421,15 +395,11 @@ def get_batch_predictions(i,test_batch, system_prompt, analyser_type, analyser_f
         
 
       if model_source == "huggingface":
-        print("GETTING huggingface RESPONSE")
         model_result = provider_huggingface.get_huggingface_response(system_prompt, user_prompt, analyser_format, analyser_type, prompt_examples, test_batch) 
         if model_result['status']=="200":
           batch_end_time = model_result["end"]
           response_text = model_result["res"]
           token_usage = model_result["token"]
-
-      print('response_text')
-      print(response_text)
 
       if len(response_text)>0:
 
@@ -453,10 +423,7 @@ def get_batch_predictions(i,test_batch, system_prompt, analyser_type, analyser_f
               raise Exception("Results Error: Invalid response: '" + p + "'")
 
         if analyser_type == 'opinion':
-          # For opinion models, we expect text responses, so we just clean and validate them
           predictions = [p.strip() for p in predictions if p.strip() and p.strip() != 'content_filter']
-          
-          # Filter out any empty predictions
           predictions = [p for p in predictions if p and len(p) > 0]
 
         if len(test_batch) != len(predictions):
@@ -467,36 +434,23 @@ def get_batch_predictions(i,test_batch, system_prompt, analyser_type, analyser_f
             "end":batch_end_time,
             "res":predictions
           }
-      
-        if (model_result['status']=="400") and ('content_filter_data' in model_result):
-          return {
-            "status":"filtered_success",
-            "end":batch_end_time,
-            "res":predictions,
-            "error": content_errors
-          }
-
       else:
         return {
           "status":"fail",
           "error":model_result
         }
-    
+
     except Exception as e:
-      print("exception in get_batch_predictions")
       print(e)
 
 
 
 def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_type,analyser_format,isBaseline):
   try:
-    # Combine dataset and labels for all items in the dataset, ready for sampling
+    # TODO, revise this function
     combinedData = []
-
     for index, item in enumerate(dataset):
-
       newItem = removeItemEmbeddings(copy.deepcopy(item)) if "image" in analyser_format else copy.deepcopy(item)
-
       label_result = next((x for x in labels if str(x['item_id']) == str(item["_id"])), None)
       
       if label_result != None:
@@ -518,64 +472,40 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
 
       combinedData.append(newItem)
     
-    # Make a copy of examples (+ Remove embeddings for images)
     train_data = [(removeItemEmbeddings(copy.deepcopy(item1)) if "image" in analyser_format else copy.deepcopy(item1)) for item1 in dataset if item1['_id'] in trained_example_ids]
-
-    # remove items without predictions
     test_data = [item3 for item3 in combinedData if (len(str(item3["predicted"])) > 0) and (len(str(item3["label"])) > 0)]
-    # get unlabelled test data
     unlabelled_test_data = [item3 for item3 in combinedData if (len(str(item3["predicted"])) > 0) and (len(str(item3["label"])) == 0)]
-
-    print(f"DEBUG: Test data items: {len(test_data)}")
-    print(f"DEBUG: Unlabelled test data items: {len(unlabelled_test_data)}")
-    
-    if len(test_data) > 0:
-      print(f"DEBUG: Sample test data item: {test_data[0]}")
 
     y_true = []
     y_pred = []
 
     if (len(test_data) > 0):
-
       for item in test_data:
-
         pred = item['predicted']
         label = item['label']
 
-        print(f"DEBUG: Processing item - Prediction: '{pred}', Label: '{label}'")
-
         if "content_filter" in pred:
-          print(f"DEBUG: Skipping content filter prediction")
           continue
-        # Handle pred
+
         if analyser_type == 'binary':
           if "positive" in pred: 
             y_pred.append(1)
-            print(f"DEBUG: Binary prediction classified as positive (1)")
           elif "negative" in pred:
             y_pred.append(0)
-            print(f"DEBUG: Binary prediction classified as negative (0)")
         elif analyser_type == 'score':
           y_pred.append(float(pred))
-          print(f"DEBUG: Score prediction: {float(pred)}")
         elif analyser_type == 'opinion':
-          # For opinion models, we'll try to extract positive/negative sentiment from the opinion text
-          # This is not working
+          # TODO, revise
           pred_lower = pred.lower()
           positive_indicators = ['positive', 'good', 'excellent', 'great', 'amazing', 'wonderful', 'fantastic', 'outstanding', 'superb', 'brilliant', 'perfect', 'love', 'like', 'enjoy', 'appreciate', 'admire', 'favorable', 'satisfied', 'happy', 'pleased', 'beautiful', 'impressive', 'skillful', 'creative', 'innovative', 'well-executed', 'masterful', 'compelling', 'engaging', 'thought-provoking', 'inspiring']
           negative_indicators = ['negative', 'bad', 'poor', 'terrible', 'awful', 'horrible', 'disappointing', 'mediocre', 'average', 'boring', 'uninteresting', 'dislike', 'hate', 'disappointed', 'unsatisfied', 'unhappy', 'displeased', 'frustrated', 'annoyed', 'ugly', 'unimpressive', 'amateurish', 'uncreative', 'derivative', 'poorly-executed', 'unskilled', 'uncompelling', 'disengaging', 'shallow', 'uninspiring']
-          
           positive_count = sum(1 for indicator in positive_indicators if indicator in pred_lower)
           negative_count = sum(1 for indicator in negative_indicators if indicator in pred_lower)
           
-          print(f"DEBUG: Opinion analysis - Positive count: {positive_count}, Negative count: {negative_count}")
-          
           if positive_count > negative_count:
             y_pred.append(1)
-            print(f"DEBUG: Opinion classified as positive (1)")
           elif negative_count > positive_count:
             y_pred.append(0)
-            print(f"DEBUG: Opinion classified as negative (0)")
           else:
             neutral_positive_indicators = ['shows', 'demonstrates', 'displays', 'presents', 'features', 'contains', 'includes', 'has', 'shows evidence of', 'indicates', 'suggests', 'reveals']
             neutral_negative_indicators = ['lacks', 'missing', 'fails to', 'does not', 'doesn\'t', 'absent', 'devoid of', 'without', 'no evidence of', 'does not show']
@@ -583,55 +513,37 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
             neutral_positive_count = sum(1 for indicator in neutral_positive_indicators if indicator in pred_lower)
             neutral_negative_count = sum(1 for indicator in neutral_negative_indicators if indicator in pred_lower)
             
-            print(f"DEBUG: Neutral analysis - Positive count: {neutral_positive_count}, Negative count: {neutral_negative_count}")
-            
             if neutral_positive_count > neutral_negative_count:
               y_pred.append(1)
-              print(f"DEBUG: Neutral classified as positive (1)")
-            # If we have more neutral-negative indicators, classify as negative  
             elif neutral_negative_count > neutral_positive_count:
               y_pred.append(0)
-              print(f"DEBUG: Neutral classified as negative (0)")
             else:
               if len(pred.strip()) > 50:
                 y_pred.append(1)
-                print(f"DEBUG: Length-based classified as positive (1) - length: {len(pred.strip())}")
               else:
                 y_pred.append(0) 
-                print(f"DEBUG: Length-based classified as negative (0) - length: {len(pred.strip())}")
         else:
           raise Exception("Compute Accuracy Error - Invalid predictions in array")
 
-        # Handle label
         if analyser_type == 'binary':
           if label == "positive": 
             y_true.append(1)
-            print(f"DEBUG: Binary label classified as positive (1)")
           elif label == "negative":
             y_true.append(0)
-            print(f"DEBUG: Binary label classified as negative (0)")
         elif analyser_type == 'score':
           y_true.append(float(label))
-          print(f"DEBUG: Score label: {float(label)}")
         elif analyser_type == 'opinion':
-          # For opinion models, we'll use the binary value (1/0) for accuracy computation
           if label == "positive": 
             y_true.append(1)
-            print(f"DEBUG: Opinion label classified as positive (1)")
           elif label == "negative":
             y_true.append(0)
-            print(f"DEBUG: Opinion label classified as negative (0)")
         else:
           raise Exception("Compute Accuracy Error - Invalid labels in array")
 
       y_true = np.array(y_true)
       y_pred = np.array(y_pred)
 
-      print(f"DEBUG: Final y_true: {y_true}")
-      print(f"DEBUG: Final y_pred: {y_pred}")
-
       num_correct = np.sum(y_true==y_pred)
-      print(f"DEBUG: Number correct: {num_correct} out of {len(y_true)}")
 
     else:
       raise Exception("Unable to calculate accuracy due to lack of labelled test data. Please label at least one item for testing.")
@@ -640,7 +552,6 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
       if (len(y_true) > 0) and (len(y_pred) > 0):
         accuracy = num_correct/len(y_true)
         
-        # Calculate additional metrics for binary classification
         from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
         try:
           precision = precision_score(y_true, y_pred, average='binary', zero_division=0)
@@ -654,7 +565,6 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
           if ((1 in y_true) or ("1" in y_true)):
             precision, recall, f1, support = precision_recall_fscore_support(y_true, y_pred, average='binary',labels=np.unique(y_pred))
 
-        # Return comprehensive metrics for opinion models
         metrics = {
           "accuracy": str(accuracy),
           "precision": str(precision),
@@ -685,7 +595,6 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
         mae = mean_absolute_error(y_true, y_pred)
         rmes = root_mean_squared_error(y_true, y_pred)
 
-        # Return comprehensive metrics for score models
         metrics = {
           "exact_accuracy": str(accuracy),
           "within_1_accuracy": str(accuracy_close),
@@ -702,7 +611,6 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
       if (len(y_true) > 0) and (len(y_pred) > 0):
         accuracy = num_correct/len(y_true)
         
-        # Calculate additional metrics for opinion models (treated as binary)
         from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
         try:
           precision = precision_score(y_true, y_pred, average='binary', zero_division=0)
@@ -716,7 +624,6 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
           if ((1 in y_true) or ("1" in y_true)):
             precision, recall, f1, support = precision_recall_fscore_support(y_true, y_pred, average='binary',labels=np.unique(y_pred))
 
-        # Return comprehensive metrics for opinion models
         metrics = {
           "accuracy": str(accuracy),
           "precision": str(precision),
@@ -731,10 +638,8 @@ def compute_accuracy(labels,dataset,trained_example_ids,predictions,analyser_typ
         raise Exception("Unable to calculate accuracy due to lack of positively labelled test data. Please provide at least one positive labelled example")
     
   except Exception as e:
-    print("Exception in compute_accuracy")
     print(e)
     print(traceback.format_exc())
-    # Return default values when accuracy calculation fails
     return "0.0", []
 
 
