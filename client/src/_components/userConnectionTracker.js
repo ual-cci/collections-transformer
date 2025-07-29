@@ -32,12 +32,10 @@ const UserConnectionTracker = () => {
       }
     };
 
-    // Track page unload (user closes tab/window)
     const handleBeforeUnload = () => {
       recordConnection('page_unload');
     };
 
-    // Record connection to backend
     const recordConnection = async (eventType) => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL || ''}/backend/user/record_connection`, {
@@ -58,7 +56,6 @@ const UserConnectionTracker = () => {
       }
     };
 
-    // Set up event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('mousemove', handleUserActivity);
     document.addEventListener('keydown', handleUserActivity);
@@ -66,18 +63,14 @@ const UserConnectionTracker = () => {
     document.addEventListener('scroll', handleUserActivity);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
-    // Periodic activity check
     const activityInterval = setInterval(() => {
       if (isPageVisible && Date.now() - lastActivityTime > ACTIVITY_TIMEOUT) {
-        // User has been inactive for 5 minutes
         recordConnection('user_inactive');
       }
     }, 60000); // Check every minute
 
-    // Record initial connection
     recordConnection('page_load');
 
-    // Cleanup
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('mousemove', handleUserActivity);
@@ -87,12 +80,11 @@ const UserConnectionTracker = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       clearInterval(activityInterval);
       
-      // Record connection on component unmount
       recordConnection('component_unmount');
     };
   }, [user]);
 
-  return null; // This component doesn't render anything
+  return null;  
 };
 
 export default UserConnectionTracker;
