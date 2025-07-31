@@ -1999,10 +1999,8 @@ Data format:\nINPUT:\n"""
             text = [e['content_value']['text'] for e in full_item["content"] if e['content_type']=='text']
             ex['text'] = text[0]
 
-      # Get results
       prediction_results = llm.use_model(analyser['prompt'],analyser['examples'],item_indices,item_range, analyser)
 
-      # Match results with item ids
       indexed_preds = []
       batch_success_count = 0
       batch_filtered_success_count = 0
@@ -2033,7 +2031,6 @@ Data format:\nINPUT:\n"""
           })
       
       if (batch_success_count > 0) or (batch_filtered_success_count > 0):
-        # Get accuracy of results (only when testing)
         if dataset_id == None and len(indexed_preds) != len(error_objs): # Testing analyser
           try:
             accuracy, unlabelled_test_data = llm.compute_accuracy(labelset['labels'],dataset['artworks'],example_refs,indexed_preds,analyser_type,analyser["analyser_format"], False)
@@ -2043,7 +2040,6 @@ Data format:\nINPUT:\n"""
         else:
           accuracy, unlabelled_test_data = "", []
 
-        # Update Analyser with results (testign only)
         if dataset_id == None:
           Analyser.update(analyser_id,{
             "sample_ids":sample_ids,
