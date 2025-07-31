@@ -456,7 +456,7 @@ const extract_no_filtered = (objects) => {
 }
 
 
- export {
+export {
     getItemListingID, 
     mergeArrays, 
     prepareCsvData,
