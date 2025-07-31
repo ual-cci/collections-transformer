@@ -1985,12 +1985,6 @@ Data format:\nINPUT:\n"""
           item_indices.append(item_index[0])
       item_indices.sort()
 
-      # Get model baseline
-      if dataset_id == None: # Check if testing analyser
-        baseline_accuracy = llm.get_model_baseline(analyser['examples'],item_range,analyser,labelset['labels'],dataset['artworks'])
-      else:
-        llm.start_wandb_logging(analyser)
-
       if (analyser_format == "image") or (analyser_format == "textimage"):
         # Get Embeddings for examples
         for ex in analyser["examples"]:
@@ -2048,7 +2042,6 @@ Data format:\nINPUT:\n"""
             accuracy, unlabelled_test_data = "0.0", []
         else:
           accuracy, unlabelled_test_data = "", []
-          llm.end_logging()
 
         # Update Analyser with results (testign only)
         if dataset_id == None:
@@ -2079,8 +2072,6 @@ Data format:\nINPUT:\n"""
 
         if(batch_filtered_success_count > 0):
           results_obj['status'] = "filtered_success"
-
-        #TODO add logic for situations where there are some failed batches mixed with some filtered ones
 
         return results_obj
       
@@ -2113,31 +2104,24 @@ Data format:\nINPUT:\n"""
       version_data = current_version[0]      
       trained_example_indices = version_data.get('example_refs', [])
       
-      # Check if predictions field exists
       if 'predictions' not in version_data:
-        # Try to get predictions from the main analyser object as fallback
         predictions = analyser.get('predictions', [])
         if not predictions:
           raise Exception("No predictions available. Please run predictions on test samples before computing accuracy.")
       else:
         predictions = version_data['predictions']
 
-      # Check if there are any predictions (test samples) available
       if not predictions or len(predictions) == 0:
         raise Exception("No test samples available. Please select test samples and run predictions before computing accuracy.")
 
       accuracy_result = llm.compute_accuracy(labelset['labels'],dataset['artworks'],trained_example_indices,predictions,analyser_type,analyser["analyser_type"],False)
       
-      # The compute_accuracy function now returns a tuple (metrics_dict, unlabelled_test_data)
       if accuracy_result and len(accuracy_result) == 2:
         metrics, unlabelled_test_data = accuracy_result
         
-        # Extract the primary accuracy metric for backward compatibility
         if isinstance(metrics, dict):
-          # New format with comprehensive metrics
           primary_accuracy = metrics.get('accuracy', metrics.get('exact_accuracy', '0.0'))
         else:
-          # Old format - just accuracy string
           primary_accuracy = metrics
           metrics = {"accuracy": primary_accuracy}
         
@@ -2209,7 +2193,6 @@ Data format:\nINPUT:\n"""
         labelset = Labelset.get(None,analyser['labelset_id'])
         new_labelset_version = data['labelset_version'] if 'labelset_version' in data else labelset['version']
 
-      #Remove embeddings from the examples objects
       for e in new_prompt_examples:
         if "image" in e:
           e['image'] = "<Embedding Removed>"
@@ -2237,7 +2220,6 @@ Data format:\nINPUT:\n"""
         "_id": id
       }
 
-      #Update referenced data
       analyser_collection.update_one(update_ref,{
         "$set":new_data_obj
       })
@@ -2258,18 +2240,15 @@ Data format:\nINPUT:\n"""
         new_data_obj["id"] = new_version_number 
         new_data_obj['labelset_version'] = labelset['version']
 
-        # Wipe predictions for new versions so that old predictions aren't displayed, causing confusion
         new_data_obj['predictions'] = []
         new_data_obj['accuracy'] = ""
 
-        # Create new version record
         analyser_collection.update_one(update_ref,{
           "$push":{
             "versions":new_data_obj
           }
         })
 
-        # Update reference to current version
         analyser_collection.update_one(update_ref,{
           "$set":{
             "version":new_version_number,
@@ -2283,7 +2262,6 @@ Data format:\nINPUT:\n"""
 
         Labelset.update(new_labelset_id, labelset_update_data, True)
 
-        #if more than 25 versions stored, remove oldest version (that isn't flagged for keeps)
         if len(analyser['versions']) > 25:
           non_keep_versions = [v for v in analyser['versions'] if (v != None) and ((("keep" in v) and (v['keep'] == "false")) or ("keep" not in v))]
           if len(non_keep_versions) == 0:
@@ -2296,7 +2274,6 @@ Data format:\nINPUT:\n"""
               }
             )
 
-        #remove version 0
         if any(x['id'] == 0 for x in analyser['versions']):
           analyser_collection.update_one(update_ref,
             {
@@ -2306,7 +2283,6 @@ Data format:\nINPUT:\n"""
 
       else:
 
-        # Update version record 
         update_ref = {
           "_id": id,
           "versions.id":str(int(analyser['version']))
@@ -2372,7 +2348,7 @@ Data format:\nINPUT:\n"""
       update_ref = {
         "_id": ObjectId(analyser_id)
       }
-      # Update reference to new version
+
       analyser_collection.update_one(update_ref,{
         "$set":{
           "version":str(version_id)

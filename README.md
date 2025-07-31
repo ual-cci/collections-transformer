@@ -12,20 +12,15 @@ https://github.com/ual-cci/transforming-collections-ml-analyser/
 ## Application Setup
 
 ```bash
-# Start by installing MongoDB, nvm, Miniconda
-conda env create --name collections_transformer --file=environment.yml
-conda activate collections_transformer
-
 cd server/
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cd ..
 screen -S backend -d -m ./run_backend.sh
 screen -S frontend -d -m ./run_frontend_dev.sh
 ```
 
-See server/requirements.txt and client/package.json for a full set of requirements. Authentication uses Auth0. You can use an existing Auth0 Tenant. Create an .env file in the server folder with the following keys.
+See `server/requirements.txt` and `client/package.json` for a full set of dependencies. Authentication uses Auth0. You can use an existing Auth0 Tenant. Create `.env` files, the following keys are needed.
 
 ```
 NEXT_PUBLIC_SERVER_URL = ""
@@ -40,16 +35,12 @@ Models used for inference are gpt4-o for OpenAI API. Alter the keys on the envir
 
 
 ## Useful MongoDB commands
-
-#### Start Mongosh
 ```
 $ mongosh
 $ use my_database
 $ show collections
-
 # Inspect dataset by name
 $ db.dataset.find({"name": "set_1"})
-
 # Count datasets
 $ db.dataset.countDocuments()
 ```
