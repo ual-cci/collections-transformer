@@ -512,7 +512,7 @@ const AnalysisDetailsModal = ({
               onMouseEnter={(e) => e.target.style.backgroundColor = '#666'}
               onMouseLeave={(e) => e.target.style.backgroundColor = 'black'}
             >
-              📊 Download Analysis Spreadsheet
+              Download Analysis Spreadsheet
             </button>
           </div>
         </div>
