@@ -36,7 +36,7 @@ const About = ({ user, error, isLoading }) => {
               <li><strong>Analytical Model:</strong> Is a Large Language Model-powered system that detects specific patterns or symbols within datasets.</li>
               <li><strong>Dataset:</strong> A collection of images or texts that are to be analysed.</li>
               <li><strong>Your Workspace:</strong> The database of models, datasets, analytical tasks and annotations that are created by users.</li>
-              <li><strong>Analytical Task:</strong> The history of each analysis performed by the user on the available datasets.</li>
+              <li><strong>Analytical Task:</strong> LLM-powered analysis performed by the user on the available datasets.</li>
             </ul>
 
             <br></br>
