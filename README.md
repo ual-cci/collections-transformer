@@ -1,12 +1,14 @@
 # Collections Transformer
 
-LLM-powered platform designed to assist users working with collections and datasets. This repository contains the preliminary design of an open LLM-based platform to assess collections in the GLAM sector. Code developed as part of the project "Transforming Collections" undertaken at UAL "Towards a National Collection (TaNC)"
+LLM-powered platform designed to assist users working with collections and datasets. This repository contains the preliminary design of an open LLM-based platform to assess collections in the GLAM sector. Code developed as part of the project "Transforming Collections" undertaken at UAL "Towards a National Collection (TaNC)".
 
 Version of the website is currently active at:  
 https://collectionstransforming.com/
 
-Adjacent repository:   
-https://github.com/ual-cci/transforming-collections-ml-analyser/   
+Ubuntu 22.04.1 LTS  
+AMD EPYC 7713 64-Core Processor  
+Linode Akamai Cloud  
+
 
 
 ## Application Setup
